@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { useBuilder } from '../hooks/useBuilder';
-import { Download, Upload, Trash2, FileCode2, Check, AlertCircle } from 'lucide-react';
+import { Download, Upload, Trash2, FileCode2} from 'lucide-react';
 import { Undo2, Redo2 } from 'lucide-react';
 
 export const Toolbar: React.FC = () => {
