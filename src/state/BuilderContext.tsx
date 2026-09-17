@@ -45,46 +45,43 @@ const INITIAL_BLOCKS: BlockItem[] = [
 ];
 
 export const BuilderProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // History Stacks for Undo / Redo
-  const [past, setPast] = useState<BlockItem[][]>([INITIAL_BLOCKS]);
+  const [past, setPast] = useState<BlockItem[][]>([]);
   const [present, setPresent] = useState<BlockItem[]>(INITIAL_BLOCKS);
   const [future, setFuture] = useState<BlockItem[][]>([]);
-
   const [selectedBlockId, setSelectedBlockId] = useState<string | null>(null);
 
   const selectBlock = useCallback((id: string | null) => {
     setSelectedBlockId(id);
   }, []);
 
-  // Helper to commit state changes into history stack
-  const recordHistory = useCallback((newBlocks: BlockItem[]) => {
-    setPresent(currentPresent => {
-      if (JSON.stringify(currentPresent) === JSON.stringify(newBlocks)) return currentPresent;
-      setPast(prevPast => [...prevPast, currentPresent]);
-      setFuture([]); // Clear redo future stack on new user action
-      return newBlocks;
+  // Clean helper to commit actions to state and update undo/redo history without nested setter bugs
+  const commitChange = useCallback((updater: (prev: BlockItem[]) => BlockItem[]) => {
+    setPresent(current => {
+      const next = updater(current);
+      if (JSON.stringify(current) === JSON.stringify(next)) return current;
+      setPast(prevPast => [...prevPast, current]);
+      setFuture([]); // Clear redo stack on new user action
+      return next;
     });
   }, []);
 
   const undo = useCallback(() => {
     if (past.length === 0) return;
-
     const previous = past[past.length - 1];
     const newPast = past.slice(0, past.length - 1);
 
     setPast(newPast);
-    setFuture(currFuture => [present, ...currFuture]);
+    setFuture(curr => [present, ...curr]);
     setPresent(previous);
     setSelectedBlockId(null);
   }, [past, present]);
 
   const redo = useCallback(() => {
     if (future.length === 0) return;
-
     const next = future[0];
     const newFuture = future.slice(1);
 
-    setPast(prevPast => [...prevPast, present]);
+    setPast(prev => [...prev, present]);
     setPresent(next);
     setFuture(newFuture);
     setSelectedBlockId(null);
@@ -114,14 +111,12 @@ export const BuilderProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
     };
     
-    setPresent(current => {
-      const next = [...current, newBlock];
-      recordHistory(next);
-      return next;
-    });
+    commitChange(current => [...current, newBlock]);
     setSelectedBlockId(newBlock.id);
-  }, [recordHistory]);
+  }, [commitChange]);
 
+  // Position updates bypass history stack during active drag ticks for performance, 
+  // keeping the movement fluid at 60 FPS.
   const updateBlockPosition = useCallback((id: string, x: number, y: number) => {
     setPresent(current =>
       current.map(block => (block.id === id ? { ...block, x: Math.max(0, x), y: Math.max(0, y) } : block))
@@ -130,43 +125,31 @@ export const BuilderProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const updateBlockContent = useCallback((id: string, key: string, value: string) => {
     const cleanValue = key === 'url' || key === 'src' ? sanitizeUrl(value) : sanitizeText(value);
-    setPresent(current => {
-      const next = current.map(block =>
+    commitChange(current =>
+      current.map(block =>
         block.id === id ? { ...block, content: { ...block.content, [key]: cleanValue } } : block
-      );
-      recordHistory(next);
-      return next;
-    });
-  }, [recordHistory]);
+      )
+    );
+  }, [commitChange]);
 
   const updateBlockStyles = useCallback((id: string, key: string, value: string) => {
     const cleanValue = sanitizeCssValue(value);
-    setPresent(current => {
-      const next = current.map(block =>
+    commitChange(current =>
+      current.map(block =>
         block.id === id ? { ...block, styles: { ...block.styles, [key]: cleanValue } } : block
-      );
-      recordHistory(next);
-      return next;
-    });
-  }, [recordHistory]);
+      )
+    );
+  }, [commitChange]);
 
   const deleteBlock = useCallback((id: string) => {
-    setPresent(current => {
-      const next = current.filter(block => block.id !== id);
-      recordHistory(next);
-      return next;
-    });
+    commitChange(current => current.filter(block => block.id !== id));
     setSelectedBlockId(current => (current === id ? null : current));
-  }, [recordHistory]);
+  }, [commitChange]);
 
   const clearCanvas = useCallback(() => {
-    setPresent(current => {
-      if (current.length === 0) return current;
-      recordHistory([]);
-      return [];
-    });
+    commitChange(() => []);
     setSelectedBlockId(null);
-  }, [recordHistory]);
+  }, [commitChange]);
 
   const exportJson = useCallback(() => {
     const layout = {
@@ -180,11 +163,10 @@ export const BuilderProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const layout = validateImportedLayout(jsonString);
     if (!layout) return false;
     
-    setPresent(layout.blocks);
-    recordHistory(layout.blocks);
+    commitChange(() => layout.blocks);
     setSelectedBlockId(null);
     return true;
-  }, [recordHistory]);
+  }, [commitChange]);
 
   const selectedBlock = useMemo(() => {
     return present.find(b => b.id === selectedBlockId) || null;

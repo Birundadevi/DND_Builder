@@ -3,6 +3,7 @@ import { BlockItem } from '../types/block';
 import { useBuilder } from '../hooks/useBuilder';
 import { Trash2 } from 'lucide-react';
 import { sanitizeText, sanitizeUrl } from '../utils/sanitize';
+import { calculateSnapPosition } from '../utils/snap';
 
 interface BlockProps {
   block: BlockItem;
@@ -10,17 +11,15 @@ interface BlockProps {
 }
 
 export const Block: React.FC<BlockProps> = memo(({ block, isSelected }) => {
-  const { selectBlock, updateBlockPosition, deleteBlock } = useBuilder();
+  const { blocks, selectBlock, updateBlockPosition, deleteBlock } = useBuilder();
   const isDraggingRef = useRef(false);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
 
-  // Handle selection cleanly on click and prevent bubbling up to canvas background
   const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     selectBlock(block.id);
   }, [block.id, selectBlock]);
 
-  // Custom high-performance pointer drag handler
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     e.stopPropagation();
     selectBlock(block.id);
@@ -37,10 +36,12 @@ export const Block: React.FC<BlockProps> = memo(({ block, isSelected }) => {
 
   const handlePointerMove = useCallback((e: React.PointerEvent) => {
     if (!isDraggingRef.current) return;
-    const newX = e.clientX - dragOffsetRef.current.x;
-    const newY = e.clientY - dragOffsetRef.current.y;
-    updateBlockPosition(block.id, newX, newY);
-  }, [block.id, updateBlockPosition]);
+    const rawX = e.clientX - dragOffsetRef.current.x;
+    const rawY = e.clientY - dragOffsetRef.current.y;
+
+    const { x, y } = calculateSnapPosition(rawX, rawY, blocks, block.id);
+    updateBlockPosition(block.id, x, y);
+  }, [block.id, blocks, updateBlockPosition]);
 
   const handlePointerUp = useCallback((e: React.PointerEvent) => {
     if (!isDraggingRef.current) return;
@@ -50,6 +51,12 @@ export const Block: React.FC<BlockProps> = memo(({ block, isSelected }) => {
       target.releasePointerCapture(e.pointerId);
     }
   }, []);
+
+  const handleDeleteClick = useCallback((e: React.MouseEvent | React.PointerEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    deleteBlock(block.id);
+  }, [block.id, deleteBlock]);
 
   const renderContent = () => {
     switch (block.type) {
@@ -61,11 +68,11 @@ export const Block: React.FC<BlockProps> = memo(({ block, isSelected }) => {
         );
       case 'image':
         return (
-          <div className="overflow-hidden rounded-md">
+          <div className="overflow-hidden rounded-md pointer-events-none">
             <img
               src={sanitizeUrl(block.content.src) || 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=400&h=200&fit=crop'}
               alt={sanitizeText(block.content.alt) || 'Block image'}
-              className="w-full h-32 object-cover pointer-events-none"
+              className="w-full h-32 object-cover"
             />
           </div>
         );
@@ -116,19 +123,21 @@ export const Block: React.FC<BlockProps> = memo(({ block, isSelected }) => {
       }}
       className={`absolute top-0 left-0 cursor-grab active:cursor-grabbing group select-none transition-shadow duration-150 ${
         isSelected
-          ? 'ring-2 ring-indigo-600 ring-offset-2 shadow-md z-20 bg-white rounded-lg'
+          ? 'ring-2 ring-indigo-600 ring-offset-2 shadow-md z-30 bg-white rounded-lg'
           : 'hover:ring-1 hover:ring-slate-300 z-10 bg-white/90 backdrop-blur-xs rounded-lg shadow-2xs'
       }`}
     >
+      {/* Delete button with aggressive pointer & click isolation */}
       <button
-        onClick={(e) => {
+        type="button"
+        onPointerDown={(e) => {
           e.stopPropagation();
-          deleteBlock(block.id);
         }}
-        className="absolute -top-2.5 -right-2.5 bg-rose-600 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-sm hover:bg-rose-700 cursor-pointer z-30"
+        onClick={handleDeleteClick}
+        className="absolute -top-3 -right-3 bg-rose-600 text-white p-1.5 rounded-full shadow-md hover:bg-rose-700 active:scale-95 transition-all cursor-pointer z-40 flex items-center justify-center"
         title="Delete Block"
       >
-        <Trash2 className="w-3.5 h-3.5" />
+        <Trash2 className="w-3.5 h-3.5 pointer-events-none" />
       </button>
 
       {renderContent()}
