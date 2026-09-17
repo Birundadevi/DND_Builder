@@ -14,11 +14,13 @@ export const Block: React.FC<BlockProps> = memo(({ block, isSelected }) => {
   const isDraggingRef = useRef(false);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
 
+  // Handle selection cleanly on click and prevent bubbling up to canvas background
   const handleClick = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     selectBlock(block.id);
   }, [block.id, selectBlock]);
 
+  // Custom high-performance pointer drag handler
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     e.stopPropagation();
     selectBlock(block.id);
@@ -119,7 +121,6 @@ export const Block: React.FC<BlockProps> = memo(({ block, isSelected }) => {
       }`}
     >
       <button
-        onPointerDown={(e) => e.stopPropagation()}
         onClick={(e) => {
           e.stopPropagation();
           deleteBlock(block.id);

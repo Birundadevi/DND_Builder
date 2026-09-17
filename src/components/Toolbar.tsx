@@ -1,12 +1,14 @@
 import React, { useRef, useState } from 'react';
 import { useBuilder } from '../hooks/useBuilder';
 import { Download, Upload, Trash2, FileCode2, Check, AlertCircle } from 'lucide-react';
+import { Undo2, Redo2 } from 'lucide-react';
 
 export const Toolbar: React.FC = () => {
   const { exportJson, importJson, clearCanvas, blocks } = useBuilder();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const { undo, redo, canUndo, canRedo } = useBuilder();
 
   const handleExport = () => {
     const jsonStr = exportJson();
@@ -74,6 +76,49 @@ export const Toolbar: React.FC = () => {
         <button onClick={() => { if (blocks.length === 0 || window.confirm('Clear canvas?')) clearCanvas(); }} style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', padding: '6px 12px', fontSize: '12px', fontWeight: 500, color: '#be123c', backgroundColor: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '6px', cursor: 'pointer' }}>
           <Trash2 className="w-3.5 h-3.5" /> Clear
         </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+  <button 
+    onClick={undo} 
+    disabled={!canUndo}
+    style={{ 
+      opacity: canUndo ? 1 : 0.4, 
+      cursor: canUndo ? 'pointer' : 'not-allowed',
+      display: 'inline-flex', 
+      alignItems: 'center', 
+      gap: '6px', 
+      padding: '6px 12px', 
+      fontSize: '12px', 
+      fontWeight: 500, 
+      color: '#334155', 
+      backgroundColor: '#f1f5f9', 
+      border: '1px solid #cbd5e1', 
+      borderRadius: '6px' 
+    }}
+  >
+    <Undo2 className="w-3.5 h-3.5" /> Undo
+  </button>
+
+  <button 
+    onClick={redo} 
+    disabled={!canRedo}
+    style={{ 
+      opacity: canRedo ? 1 : 0.4, 
+      cursor: canRedo ? 'pointer' : 'not-allowed',
+      display: 'inline-flex', 
+      alignItems: 'center', 
+      gap: '6px', 
+      padding: '6px 12px', 
+      fontSize: '12px', 
+      fontWeight: 500, 
+      color: '#334155', 
+      backgroundColor: '#f1f5f9', 
+      border: '1px solid #cbd5e1', 
+      borderRadius: '6px' 
+    }}
+  >
+    <Redo2 className="w-3.5 h-3.5" /> Redo
+  </button>
+</div>
       </div>
     </header>
   );
