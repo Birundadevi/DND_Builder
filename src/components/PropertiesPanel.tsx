@@ -1,13 +1,29 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useBuilder } from '../hooks/useBuilder';
 import { Sliders, Trash2 } from 'lucide-react';
 
 export const PropertiesPanel: React.FC = () => {
   const { selectedBlock, updateBlockContent, updateBlockStyles, deleteBlock } = useBuilder();
 
+  // Local state to keep typing smooth and prevent focus loss
+  const [localText, setLocalText] = useState('');
+  const [localSrc, setLocalSrc] = useState('');
+  const [localAlt, setLocalAlt] = useState('');
+  const [localUrl, setLocalUrl] = useState('');
+
+  // Sync local inputs whenever the selected block ID changes
+  useEffect(() => {
+    if (selectedBlock) {
+      setLocalText(selectedBlock.content.text || '');
+      setLocalSrc(selectedBlock.content.src || '');
+      setLocalAlt(selectedBlock.content.alt || '');
+      setLocalUrl(selectedBlock.content.url || '');
+    }
+  }, [selectedBlock?.id]);
+
   if (!selectedBlock) {
     return (
-      <aside className="w-80 flex-shrink-0 border-l border-slate-200 bg-white p-5 flex flex-col h-full select-none">
+      <aside className="w-80 flex-shrink-0 border-l border-slate-200 bg-white p-5 flex flex-col h-full">
         <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-4">Properties</h2>
         <div className="flex-1 flex flex-col items-center justify-center text-center text-slate-400 px-4">
           <Sliders className="w-8 h-8 text-slate-300 mb-2 stroke-1" />
@@ -19,7 +35,10 @@ export const PropertiesPanel: React.FC = () => {
   }
 
   return (
-    <aside className="w-80 flex-shrink-0 border-l border-slate-200 bg-white p-5 flex flex-col h-full overflow-y-auto select-none">
+    <aside 
+      onPointerDown={(e) => e.stopPropagation()} 
+      className="w-80 flex-shrink-0 border-l border-slate-200 bg-white p-5 flex flex-col h-full overflow-y-auto"
+    >
       <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
         <div>
           <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Properties</h2>
@@ -35,13 +54,17 @@ export const PropertiesPanel: React.FC = () => {
       </div>
 
       <div className="space-y-4">
+        {/* Dynamic Content Controls */}
         {(selectedBlock.type === 'text' || selectedBlock.type === 'button') && (
           <div>
             <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wide mb-1">Text Content</label>
             <input
               type="text"
-              value={selectedBlock.content.text || ''}
-              onChange={e => updateBlockContent(selectedBlock.id, 'text', e.target.value)}
+              value={localText}
+              onChange={e => {
+                setLocalText(e.target.value);
+                updateBlockContent(selectedBlock.id, 'text', e.target.value);
+              }}
               className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
             />
           </div>
@@ -53,8 +76,11 @@ export const PropertiesPanel: React.FC = () => {
               <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wide mb-1">Image Source URL</label>
               <input
                 type="text"
-                value={selectedBlock.content.src || ''}
-                onChange={e => updateBlockContent(selectedBlock.id, 'src', e.target.value)}
+                value={localSrc}
+                onChange={e => {
+                  setLocalSrc(e.target.value);
+                  updateBlockContent(selectedBlock.id, 'src', e.target.value);
+                }}
                 className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
               />
             </div>
@@ -62,8 +88,11 @@ export const PropertiesPanel: React.FC = () => {
               <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wide mb-1">Alt Description</label>
               <input
                 type="text"
-                value={selectedBlock.content.alt || ''}
-                onChange={e => updateBlockContent(selectedBlock.id, 'alt', e.target.value)}
+                value={localAlt}
+                onChange={e => {
+                  setLocalAlt(e.target.value);
+                  updateBlockContent(selectedBlock.id, 'alt', e.target.value);
+                }}
                 className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
               />
             </div>
@@ -75,8 +104,11 @@ export const PropertiesPanel: React.FC = () => {
             <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wide mb-1">Action URL</label>
             <input
               type="text"
-              value={selectedBlock.content.url || ''}
-              onChange={e => updateBlockContent(selectedBlock.id, 'url', e.target.value)}
+              value={localUrl}
+              onChange={e => {
+                setLocalUrl(e.target.value);
+                updateBlockContent(selectedBlock.id, 'url', e.target.value);
+              }}
               placeholder="https://..."
               className="w-full px-3 py-1.5 text-xs bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
             />
@@ -85,6 +117,7 @@ export const PropertiesPanel: React.FC = () => {
 
         <hr className="border-slate-100 my-2" />
 
+        {/* Styling Controls */}
         {(selectedBlock.type === 'text' || selectedBlock.type === 'button') && (
           <div>
             <label className="block text-[11px] font-semibold text-slate-600 uppercase tracking-wide mb-1">Font Size</label>

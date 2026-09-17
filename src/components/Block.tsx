@@ -14,7 +14,13 @@ export const Block: React.FC<BlockProps> = memo(({ block, isSelected }) => {
   const isDraggingRef = useRef(false);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
 
-  // Custom high-performance pointer drag handler that avoids global React tree churn per coordinate tick
+  // Handle selection cleanly on click and prevent bubbling up to canvas background
+  const handleClick = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    selectBlock(block.id);
+  }, [block.id, selectBlock]);
+
+  // Custom high-performance pointer drag handler
   const handlePointerDown = useCallback((e: React.PointerEvent) => {
     e.stopPropagation();
     selectBlock(block.id);
@@ -45,7 +51,6 @@ export const Block: React.FC<BlockProps> = memo(({ block, isSelected }) => {
     }
   }, []);
 
-  // Safe rendering switch based on block type
   const renderContent = () => {
     switch (block.type) {
       case 'text':
@@ -101,6 +106,7 @@ export const Block: React.FC<BlockProps> = memo(({ block, isSelected }) => {
 
   return (
     <div
+      onClick={handleClick}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
@@ -114,7 +120,6 @@ export const Block: React.FC<BlockProps> = memo(({ block, isSelected }) => {
           : 'hover:ring-1 hover:ring-slate-300 z-10 bg-white/90 backdrop-blur-xs rounded-lg shadow-2xs'
       }`}
     >
-      {/* Absolute delete utility button when selected or hovered */}
       <button
         onClick={(e) => {
           e.stopPropagation();
